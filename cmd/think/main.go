@@ -46,6 +46,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -271,7 +272,12 @@ func main() {
 		shellPath = "/bin/bash"
 	}
 
-	_, err = ag.System("system", struct{ Shell string }{shellPath})
+	operatingSystem := runtime.GOOS
+
+	_, err = ag.System("system", struct {
+		Shell string
+		OS    string
+	}{Shell: shellPath, OS: operatingSystem})
 	if err != nil {
 		log.Fatal(err)
 	}
