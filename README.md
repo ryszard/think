@@ -222,3 +222,4 @@ Just send me a pull request.
 
 ## License
 
+MIT. Please see the LICENSE file for details.
