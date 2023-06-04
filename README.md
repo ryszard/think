@@ -13,6 +13,9 @@
 
 - **Code editing**: Before executing, you have the chance to review and edit the proposed command to make sure it's exactly what you want.
 
+## Limitations
+This uses AI, which is known to make mistakes. **You should double check if the tools isn't proposing to do something stupid. Do not run commands blindly.** `think` is not a replacement for your brain, it's a tool to help you be more productive.
+
 Please note that this will send some of your data to OpenAI (your commands and the first 1000 bytes of their stdout and stderr). If you are not comfortable with this, please do not use this tool.
 
 ## Installation
