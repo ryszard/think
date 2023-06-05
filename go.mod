@@ -1,6 +1,6 @@
 module github.com/ryszard/think
 
-go 1.20
+go 1.17
 
 require (
 	github.com/chzyer/readline v1.5.1
