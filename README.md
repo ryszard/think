@@ -5,6 +5,8 @@
 
 `think` is a command line tool that incorporates OpenAI's AI models to simplify and streamline your shell operations. No need to remember complex command line details, just describe what you want, and let `think` generate the shell code for you. Obviously, the heavy lifting here is done by the AI model, but `think` provides a convenient interface to interact with it.
 
+<img src="doc/img/find.gif" width=800/>
+
 ## Features
 
 - **AI-powered command generation**: Just describe in your own words what you want to achieve, and `think` will generate the necessary shell command(s) for you.
@@ -50,6 +52,8 @@ You can either pass flags or set environment variables to configure `think`. The
 
 ### Task: Find the 10 largest files in ~/Downloads
 
+<img src="doc/img/find.gif" width=800/>
+
 Do you always remember the exact syntax for the `find` command? I don't. But I know what I want to do, so I can just describe it to "Think" and let it generate the command for me.
 
 ```console
@@ -71,6 +75,8 @@ run> find ~/Downloads -type f -exec du -sh {} \; 2> /dev/null | sort -rh | head 
 ```
 
 ### Task: Analyze a CSV file
+
+<img src="doc/img/csv.gif" width=800/>
 
 How about some CSV wrangling?
 
