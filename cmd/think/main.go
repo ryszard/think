@@ -311,7 +311,12 @@ func main() {
 		}
 	}
 
-	ag := agent.New("scripter", agent.WithClient(cl), agent.WithModel(*model), agent.WithMaxTokens(500))
+	ag := agent.New("scripter",
+		agent.WithClient(cl),
+		agent.WithModel(*model),
+		agent.WithMaxTokens(500),
+		agent.WithMemory(agent.TokenBufferMemory(3000)),
+	)
 	ag, err = agent.Templated(ag, map[string]string{
 		"system": SystemPrompt,
 		"user":   UserPrompt,
