@@ -4,8 +4,11 @@ before:
   hooks:
     # You may remove this if you don't use go modules.
     - go mod tidy
+    - go mod download
     # you may remove this if you don't need go generate
     - go generate ./...
+gomod:
+  proxy: true
 builds:
   - main: ./cmd/think
     env:
@@ -29,6 +32,9 @@ archives:
     format_overrides:
     - goos: windows
       format: zip
+    files:
+      - README.md
+      - LICENSE
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -39,7 +45,11 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-
+brews:
+  -
+    tap:
+      owner: ryszard
+      name: homebrew-ryszard
 # The lines beneath this are called `modelines`. See `:help modeline`
 # Feel free to remove those if you don't want/use them.
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
