@@ -33,8 +33,6 @@ In order to be able to use `think`, you need to have an OpenAI API key. `think` 
 export OPENAI_API_KEY="sk-..."
 ```
 
-In practice, you also need to have access to GPT-4 through the API, which is unfortunately still behind a waitlist.
-
 ## Usage
 
 Upon running, `think` opens an interactive session where you can discuss your task with the AI, review and edit the proposed code, and then execute it when ready. It has two modes, _think_ and _run_. In thinking mode, you can describe your task to the AI, and it will generate the necessary shell code for you. In running mode, you can review and edit the proposed code, and then execute it when ready. In running mode, you can hit C-c or C-d to go back to thinking mode. If the AI gets something wrong, simply tell it to fix it. It helps if `--send-output` is true (see bellow).
