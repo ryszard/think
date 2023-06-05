@@ -21,3 +21,5 @@
 go.work
 .DS_Store
 cmd/think/think
+
+dist/
