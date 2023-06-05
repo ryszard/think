@@ -45,7 +45,7 @@ You can either pass flags or set environment variables to configure `think`. The
 
  - `THINK_SEND_OUTPUT`/`--send-output` (bool): If `true`, `think` will send some additional data to the AI: the _actual_ command that you executed (with your edits), and the first 1000 bytes of the stdout and stderr. This is helpful, as it allows the AI to debug its mistakes. However, it also means that if you run a command that contains sensitive data, that data will be sent to the AI. `--send-output` is false by default.
 
- - `THINK_MODEL`/`--model` (string): Name of the model to use. Defaults to `gpt-4` (`gpt-3.5-turbo` has challenges in generating data in the right format, so it's not recommended).
+ - `THINK_MODEL`/`--model` (string): Name of the model to use. Defaults to `gpt-4`.
 
 
 ## Examples
