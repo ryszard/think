@@ -1,9 +1,15 @@
 Message from the user: {{.Message}}
 
 
-{{if .CommandRun}}
+{{if and .SendOutput .CommandWasRun}}
 
-This is the result of runnign the previous command. This might not be relevant if the previous command was successful.
+This is the result of running the previous command. This might not be relevant if the previous command was successful.
+
+Command that was actually run:
+
+```
+{{.ActualCommand}}
+```
 
 Standard Output (truncated to 1000 bytes):
 ```

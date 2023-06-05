@@ -47,6 +47,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,8 +60,45 @@ import (
 )
 
 var (
-	model = flag.String("model", "", "model to use. The default is gpt-4")
+	model      = flag.String("model", "", "model to use. The default is gpt-4")
+	sendOutput = flag.Bool("send-output", false, "send the command you run and part of its stdout and stderr to the AI model. Useful, but potentially dangerous")
+	logLevel   = flag.String("log-level", "error", "log level. One of: debug, info, warn, error, fatal, panic")
+
+	flagsSet = make(map[string]bool)
 )
+
+func init() {
+	flag.Usage = usage
+
+	flag.Parse()
+
+	// Set flagsSet for each flag that was provided in command line
+	flag.Visit(func(f *flag.Flag) {
+		flagsSet[f.Name] = true
+	})
+
+	// Set default values only if flag wasn't provided
+	if !flagsSet["model"] {
+		// Check for THINK_MODEL environment variable if the flag wasn't provided
+		if envModel, ok := os.LookupEnv("THINK_MODEL"); ok {
+			*model = envModel
+		} else {
+			*model = "gpt-4" // default value
+		}
+	}
+
+	// Check for THINK_SEND_OUTPUT environment variable if the flag wasn't provided
+	if !flagsSet["send-output"] {
+		if envSendOutput, ok := os.LookupEnv("THINK_SEND_OUTPUT"); ok {
+			// Parsing the string to bool. In case of error, it will be false.
+			parsedEnvSendOutput, err := strconv.ParseBool(envSendOutput)
+			if err != nil {
+				log.Fatalf("error parsing THINK_SEND_OUTPUT environment variable: %v", err)
+			}
+			*sendOutput = parsedEnvSendOutput
+		}
+	}
+}
 
 //go:embed system.md
 var SystemPrompt string
@@ -75,9 +113,10 @@ type REPL struct {
 	shellPath       string
 	thinkingPrompt  string
 	executingPrompt string
+	sendOutput      bool
 }
 
-func NewREPL(agent agent.Agent, shellPath, initialInput string) *REPL {
+func NewREPL(agent agent.Agent, shellPath, initialInput string, sendOutput bool) *REPL {
 	red := color.New(color.FgRed).SprintFunc()
 	blue := color.New(color.FgCyan).SprintFunc()
 	repl := &REPL{
@@ -85,6 +124,7 @@ func NewREPL(agent agent.Agent, shellPath, initialInput string) *REPL {
 		shellPath:       shellPath,
 		thinkingPrompt:  fmt.Sprintf("%s> ", blue("think")),
 		executingPrompt: fmt.Sprintf("%s> ", red("run")),
+		sendOutput:      sendOutput,
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -132,7 +172,8 @@ func (repl *REPL) Run() {
 
 	var lastOut, lastErr string
 	var exitCode int
-	var commandRun bool
+	var commandWasRun bool
+	var actualCommand string
 	for {
 		line, err := repl.readline.Readline()
 		if err != nil { // io.EOF
@@ -157,7 +198,7 @@ func (repl *REPL) Run() {
 				continue
 			}
 			var stdoutBuf, stderrBuf bytes.Buffer
-
+			actualCommand = strings.Join([]string{repl.shellPath, "-c", line}, " ")
 			cmd := exec.Command(repl.shellPath, "-c", line)
 
 			// Create multiwriters so we write to both the buffers and standard output/error
@@ -175,26 +216,32 @@ func (repl *REPL) Run() {
 			if len(lastErr) > 1000 {
 				lastErr = lastErr[len(lastErr)-1000:]
 			}
-			commandRun = true
+			commandWasRun = true
 			exitCode = cmd.ProcessState.ExitCode()
 
 			repl.outOfCodeLoop()
 		} else {
-			if _, err := repl.agent.Listen("user", struct {
-				Message    string
-				CommandRun bool
-				Stdout     string
-				Stderr     string
-				ExitCode   int
+			feedback, err := repl.agent.Listen("user", struct {
+				Message       string
+				CommandWasRun bool
+				ActualCommand string
+				Stdout        string
+				Stderr        string
+				ExitCode      int
+				SendOutput    bool
 			}{
-				Message:    strings.TrimSpace(line),
-				CommandRun: commandRun,
-				Stdout:     lastOut,
-				Stderr:     lastErr,
-				ExitCode:   exitCode,
-			}); err != nil {
+				Message:       strings.TrimSpace(line),
+				CommandWasRun: commandWasRun,
+				ActualCommand: actualCommand,
+				Stdout:        lastOut,
+				Stderr:        lastErr,
+				ExitCode:      exitCode,
+				SendOutput:    repl.sendOutput,
+			})
+			if err != nil {
 				log.Fatal(err)
 			}
+			logrus.WithField("feedback", feedback).Debug("feedback sent to the AI model")
 
 			response, err := repl.agent.Respond(context.Background(), agent.WithStreaming(os.Stdout))
 			if err != nil {
@@ -220,32 +267,38 @@ func (repl *REPL) Run() {
 func usage() {
 	fmt.Fprintf(os.Stderr, `think is a command-line tool that uses AI to generate and execute bash commands.
 
-Usage:
-
-  think [-model model] "your command"
-
-Options:
-
-  -model    Specifies the AI model to use. The default model is 'gpt-4'. 
-
-You can also set the AI model to use with the 'THINK_MODEL' environment variable. If neither is provided, 
-the default model is 'gpt-4'. 
-
-Examples:
-
-  think "list all files in this directory"
-  think -model=gpt-4 "create a new directory called test"
-
-`)
+	Usage:
+	
+	  think [-model model] [-send-output] "your command"
+	
+	Options:
+	
+	  -model        Specifies the AI model to use. The default model is 'gpt-4'. 
+	
+	  -send-output  Send the command you run and part of its stdout and stderr to the AI model. 
+					Useful, but potentially dangerous.
+	
+	You can also set the AI model to use with the 'THINK_MODEL' environment variable. If neither is provided, 
+	the default model is 'gpt-4'. 
+	
+	Examples:
+	
+	  think "list all files in this directory"
+	  think -model=gpt-4 "create a new directory called test"
+	  think -send-output "print the contents of this file"
+	`)
 	flag.PrintDefaults()
 }
 
 func main() {
-	flag.Usage = usage
 
-	flag.Parse()
+	level, err := logrus.ParseLevel(*logLevel)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	logrus.SetLevel(logrus.ErrorLevel)
+	logrus.SetLevel(level)
+
 	var cl client.Client = openai.New(os.Getenv("OPENAI_API_KEY"))
 	cl = client.Retrying(cl, 1*time.Second, 5*time.Second, 10)
 
@@ -259,7 +312,7 @@ func main() {
 	}
 
 	ag := agent.New("scripter", agent.WithClient(cl), agent.WithModel(*model), agent.WithMaxTokens(500))
-	ag, err := agent.Templated(ag, map[string]string{
+	ag, err = agent.Templated(ag, map[string]string{
 		"system": SystemPrompt,
 		"user":   UserPrompt,
 	})
@@ -282,7 +335,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	repl := NewREPL(ag, shellPath, strings.Join(flag.Args(), " "))
+	repl := NewREPL(ag, shellPath, strings.Join(flag.Args(), " "), *sendOutput)
 	defer repl.Close()
 
 	repl.Run()
