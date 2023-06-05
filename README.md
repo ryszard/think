@@ -1,5 +1,5 @@
 # 🧠💻Think
-⚡️AI-Assisted Command Line Mastery⚡️
+⚡️Make AI your command line copilot⚡️
 
 ## Overview
 
