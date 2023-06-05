@@ -3,30 +3,46 @@
 
 ## Overview
 
-`think` is a command line tool that incorporates AI to simplify and streamline your shell operations. No need to remember complex command line details, just describe what you want, and let `think` generate the shell code for you.
+`think` is a command line tool that incorporates OpenAI's AI models to simplify and streamline your shell operations. No need to remember complex command line details, just describe what you want, and let `think` generate the shell code for you. Obviously, the heavy lifting here is done by the AI model, but `think` provides a convenient interface to interact with it.
 
 ## Features
 
-- **AI-powered command generation**: Just describe in your own words what you want to achieve, and Think will generate the necessary shell command(s) for you.
+- **AI-powered command generation**: Just describe in your own words what you want to achieve, and `think` will generate the necessary shell command(s) for you.
 
 - **Iterative refinement**: Not satisfied with the command generated? No problem. You can provide additional feedback and guide the AI to produce a more suitable result.
 
 - **Code editing**: Before executing, you have the chance to review and edit the proposed command to make sure it's exactly what you want.
 
-## Limitations
-This uses AI, which is known to make mistakes. **You should double check if the tools isn't proposing to do something stupid. Do not run commands blindly.** `think` is not a replacement for your brain, it's a tool to help you be more productive.
-
-Please note that this will send some of your data to OpenAI (your commands and the first 1000 bytes of their stdout and stderr). If you are not comfortable with this, please do not use this tool.
-
 ## Installation
 
-Coming soon.
+If you are on a Mac, you can install `think` using Homebrew:
+
+```console
+brew install ryszard/ryszard/think
+```
+
+If you have Go installed, you can also just do
+
+```console
+go install github.com/ryszard/think/cmd/think
+ ```
 
 ## Usage
 
-Upon running, `think` opens an interactive session where you can discuss your task with the AI, review and edit the proposed code, and then execute it when ready. It has two modes, "thinking" and "running." In "thinking" mode, you can describe your task to the AI, and it will generate the necessary shell code for you. In "running" mode, you can review and edit the proposed code, and then execute it when ready. In running mode, you can hit C-c or C-d to go back to thinking mode. If the AI gets something wrong, tell it to fix it – it has access to the truncated output of the previous command, which should help it debug.
+Upon running, `think` opens an interactive session where you can discuss your task with the AI, review and edit the proposed code, and then execute it when ready. It has two modes, _think_ and _run_. In thinking mode, you can describe your task to the AI, and it will generate the necessary shell code for you. In running mode, you can review and edit the proposed code, and then execute it when ready. In running mode, you can hit C-c or C-d to go back to thinking mode. If the AI gets something wrong, simply tell it to fix it. It helps if `--send-output` is true (see bellow).
+
+## Configuration
+
+You can either pass flags or set environment variables to configure `think`. The following flags and env variables are available:
+
+ - `THINK_SEND_OUTPUT`/`--send-output` (bool): If `true`, `think` will send some additional data to the AI: the _actual_ command that you executed (with your edits), and the first 1000 bytes of the stdout and stderr. This is helpful, as it allows the AI to debug its mistakes. However, it also means that if you run a command that contains sensitive data, that data will be sent to the AI. `--send-output` is false by default.
+
+ - `THINK_MODEL`/`--model` (string): Name of the model to use. Defaults to `gpt-4` (`gpt-3.5-turbo` has challenges in generating data in the right format, so it's not recommended).
+
 
 ## Examples
+
+### Task: Find the 10 largest files in ~/Downloads
 
 Do you always remember the exact syntax for the `find` command? I don't. But I know what I want to do, so I can just describe it to "Think" and let it generate the command for me.
 
@@ -47,7 +63,12 @@ run> find ~/Downloads -type f -exec du -sh {} \; 2> /dev/null | sort -rh | head 
 113M	/Users/ric/Downloads/files-WhatsApp.dmg
 112M	/Users/ric/Downloads/Messenger.185.0.0.5.228.dmg
 ```
+
+### Task: Analyze a CSV file
+
 How about some CSV wrangling?
+
+(I was actually not looking forward to preparing example data for this one, but then I remembered that I could just ask the AI to do it for me... 😅)
 
 ```console
 think> Please generate a simple CSV file with a few columns. At least one column should be numeric.
@@ -58,7 +79,6 @@ run> echo -e "ID,Name,Age\n1,Alice,30\n2,Bob,25\n3,Carol,28" > data.csv
 think> get me the first column from data.csv
 Extracting the first column from data.csv
 cut -d"," -f1 data.csv
-
 run> cut -d"," -f1 data.csv
 ID
 1
@@ -71,6 +91,8 @@ awk -F"," 'NR>1 {sum += $3} END {print sum}' data.csv
 run> awk -F"," 'NR>1 {sum += $3} END {print sum}' data.csv
 83
 ```
+
+### Task: Create a Go project
 
 Now let's do something more fancy:
 
@@ -97,7 +119,7 @@ Initialized empty Git repository in /Users/ric/thinktest/.git/
  create mode 100644 go.mod
 ```
 
-Note that it got the LICENSE text right, which is pretty cool. In earlier versions it was trying to download the license from the Internet, but that was obviously problematic for an AI without access to the Internet and a knowledge cutoff.
+Note that it got the LICENSE text right (I diffed it), which is pretty cool. In earlier versions it was trying to download the license from the Internet, but that was obviously problematic for an AI without access to the Internet and a knowledge cutoff. I reminded it in the prompt about its limitations.
 
 ```console
 think> find all the image files in ~/Downloads. copy them to ./images (create it). Anonymize the names so that I don't leak information (this is for a demo)
@@ -111,41 +133,21 @@ usage: cp [-R [-H | -L | -P]] [-fi | -n] [-aclpsvXx] source_file target_file
        cp [-R [-H | -L | -P]] [-fi | -n] [-aclpsvXx] source_file ... target_directory
 xxd: random: No such file or directory
 
-(plenty of those, I removed them for brevity)
-
+   (plenty more errors here)
 
 cp: illegal option -- t
 usage: cp [-R [-H | -L | -P]] [-fi | -n] [-aclpsvXx] source_file target_file
        cp [-R [-H | -L | -P]] [-fi | -n] [-aclpsvXx] source_file ... target_directory
+```
+
+So, `think` quite often gets something wrong (especially that GPT-4 tends to assume it's using the GNU versions of various command line tools). However, that's not a big deal, as you can just tell it to fix it.
+
+```console
 think> fix it
 Finding image files in ~/Downloads, creating ./images directory, copying them with anonymized names to the directory
 mkdir -p ./images && find ~/Downloads -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) -exec sh -c 'cp "$0" "./images/$(xxd -l 8 -p -u /dev/urandom).${0##*.}"' '{}' \;
 
 run> mkdir -p ./images && find ~/Downloads -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) -exec sh -c 'cp "$0" "./images/$(xxd -l 8 -p -u /dev/urandom).${0##*.}"' '{}' \;
-think> now please give me the average dimensions of the files in images
-Calculating the average dimensions of image files in the ./images directory
-find ./images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) -exec identify -format "%wx%h\n" '{}' \; | awk -F 'x' '{total_w+=$1; total_h+=$2; count++} END {print total_w/count "x" total_h/count}'
-
-run> find ./images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) -exec identify -format "%wx%h\n" '{}' \; | awk -F 'x' '{total_w+=$1; total_h+=$2; count++} END {print total_w/count "x" total_h/count}'
-find: identify: No such file or directory
-find: identify: No such file or directory
-find: identify: No such file or directory
-find: identify: No such file or directory
-find: identify: No such file or directory
-find: identify: No such file or directory
-find: identify: No such file or directory
-find: identify: No such file or directory
-find: identify: No such file or directory
-find: identify: No such file or directory
-find: identify: No such file or directory
-awk: division by zero
- source line number 1
-think> fix it
-Calculating the average dimensions of image files in the ./images directory using sips command
-find ./images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) -exec sips -g pixelWidth -g pixelHeight '{}' \; | awk '/Width|Height/{sum+=$NF;count++} END {print sum/count}'
-
-run> find ./images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) -exec sips -g pixelWidth -g pixelHeight '{}' \; | awk '/Width|Height/{sum+=$NF;count++} END {print sum/count}'
-2029.41
 think> now please give me the average dimensions (height and width) of the files in images
 Calculating the average dimensions (width and height) of image files in the ./images directory using sips command
 find ./images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) -exec sips -g pixelWidth -g pixelHeight '{}' \; | awk '/Width/{w+=$NF;wc++} /Height/{h+=$NF;hc++} END {print "Width: " w/wc ", Height: " h/hc}'
@@ -219,10 +221,25 @@ run> find ./images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png
   pixelHeight: 661
 ```
 
+## Limitations
+
+This uses AI, which is known to make mistakes. **You should double check if the tools isn't proposing to do something stupid. Do not run commands blindly.** `think` is not a replacement for your brain, it's a tool to help you be more productive.
+
+Please note that with the `--send-output` flag, `think` this will send some additional data to the AI: the _actual_ command that you executed (with your edits), and the first 1000 bytes of the stdout and stderr. This is helpful, as it allows the AI to debug its mistakes. However, it also means that if you run a command that contains sensitive data, that data will be sent to the AI. `--send-output` is false by default, but please be mindful of this.
+
+You should never type any passwords into `think` (or into your shell, for that matter). Typing passwords directly in the command line poses security risks. The shell's command history can inadvertently store these passwords in plain text. Additionally, they may be visible in the process list to others on the system. If commands are sent over a network, passwords could be exposed during transmission. Hence, it's advised to use safer alternatives like password prompts or secure password files. 
+
 ## Contributing
 
 Just send me a pull request.
 
+## Status
+Experimental, use at your own risk.
+
+## Acknowledgements
+
+I am grateful to [OpenAI](https://openai.com/) for making their models available to the public ❤️
+
 ## License
 
-MIT. Please see the LICENSE file for details.
+MIT. Please see the [LICENSE](LICENSE) file for details.

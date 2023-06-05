@@ -3,36 +3,13 @@
 // to interpret these task descriptions and generate corresponding bash code. This code can then be edited by the user
 // and subsequently executed in the shell.
 //
-// The utility supports multiple modes of operation, which are controlled by its current state:
+// The utility supports two modes of operation:
 //
 //   - In the 'thinking' state, the user interacts with the AI model, describing the task they want to execute. The AI
 //     responds with a concise explanation and a proposed bash command that corresponds to the described task.
 //
 //   - In the 'executing' state, the user reviews the proposed bash code, potentially editing it for correctness or
-//     to better suit their specific needs. If the user approves the code (by typing "ok"), it is immediately executed in the shell.
-//     If the user is not satisfied with the proposed code, they can continue interacting with the AI to improve it.
-//
-// The transition between states is managed by the REPL (Read-Eval-Print Loop) object, which represents the main
-// interface of the utility. It maintains the state of the utility and routes user input to the appropriate
-// component (the AI model or the shell executor).
-//
-// The utility also supports other features like command history, which is stored in a .think_history file in the
-// user's home directory, and configurable prompts for different states, which are color-coded for better visibility.
-//
-// This utility uses several third-party packages, including 'github.com/chzyer/readline' for readline capabilities,
-// 'github.com/fatih/color' for colorizing output, 'github.com/sirupsen/logrus' for logging, and 'github.com/ryszard/agency'
-// for interacting with the AI model.
-//
-// Usage:
-//
-// The utility is a command-line tool, and as such is run from the terminal. You can set the AI model to use with the
-// '-model' flag, or by setting the 'THINK_MODEL' environment variable. If neither is provided, the default model is 'gpt-4'.
-//
-// You can also provide an initial command to the utility by passing it as an argument.
-//
-// Example:
-//
-//	think -model=gpt-4 "list all files in this directory"
+//     to better suit their specific needs.
 package main
 
 import (
