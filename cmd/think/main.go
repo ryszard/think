@@ -117,6 +117,7 @@ func NewREPL(agent agent.Agent, shellPath, initialInput string, sendOutput bool)
 		InterruptPrompt:   "^C",
 		EOFPrompt:         "exit",
 		HistorySearchFold: true,
+		AutoComplete:      new(FileCompleter),
 	}
 
 	rl, err := readline.NewEx(config)
