@@ -152,7 +152,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	repl := NewREPL(ag, shellPath, strings.Join(flag.Args(), " "), *sendOutput)
+	repl, err := NewREPL(ag, shellPath, strings.Join(flag.Args(), " "), *sendOutput)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer repl.Close()
 
 	repl.Run()

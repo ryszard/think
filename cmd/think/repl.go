@@ -17,6 +17,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const outputSent = 1000
+
 type REPL struct {
 	readline        *readline.Instance
 	inCode          bool
@@ -27,7 +29,7 @@ type REPL struct {
 	sendOutput      bool
 }
 
-func NewREPL(agent agent.Agent, shellPath, initialInput string, sendOutput bool) *REPL {
+func NewREPL(agent agent.Agent, shellPath, initialInput string, sendOutput bool) (*REPL, error) {
 	red := color.New(color.FgRed).SprintFunc()
 	blue := color.New(color.FgCyan).SprintFunc()
 	repl := &REPL{
@@ -40,7 +42,7 @@ func NewREPL(agent agent.Agent, shellPath, initialInput string, sendOutput bool)
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	historyFile := filepath.Join(homeDir, ".think_history")
@@ -62,7 +64,7 @@ func NewREPL(agent agent.Agent, shellPath, initialInput string, sendOutput bool)
 	rl.WriteStdin([]byte(initialInput))
 
 	repl.readline = rl
-	return repl
+	return repl, nil
 }
 
 func (repl *REPL) Close() {
@@ -121,18 +123,25 @@ func (repl *REPL) Run() {
 			cmd.Stderr = errMulti
 			cmd.Run()
 			lastOut, lastErr = stdoutBuf.String(), stderrBuf.String()
-			// truncate lastOut and lastErr to 1000 characters
-			if len(lastOut) > 1000 {
-				lastOut = lastOut[len(lastOut)-1000:]
+			// truncate lastOut and lastErr to outputSent characters
+			if len(lastOut) > outputSent {
+				lastOut = lastOut[len(lastOut)-outputSent:]
 			}
-			if len(lastErr) > 1000 {
-				lastErr = lastErr[len(lastErr)-1000:]
+			if len(lastErr) > outputSent {
+				lastErr = lastErr[len(lastErr)-outputSent:]
 			}
 			commandWasRun = true
 			exitCode = cmd.ProcessState.ExitCode()
 
 			repl.outOfCodeLoop()
 		} else {
+			// if line is one of exit, quit, bye, or ^D, exit
+			if line == "exit" || line == "quit" || line == "bye" {
+				return
+			}
+			if line == "" {
+				continue
+			}
 			feedback, err := repl.agent.Listen("user", struct {
 				Message       string
 				CommandWasRun bool
