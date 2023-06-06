@@ -76,6 +76,25 @@ var SystemPrompt string
 //go:embed user.md
 var UserPrompt string
 
+var SimpleModelExamples = []struct{ Question, Answer string }{
+	{
+		Question: "create a CSV file with a few fields (at least one of them numeric) in /tmp/data.csv",
+		Answer: `Create a CSV file /tmp/data.csv with a few fields, including at least one numeric field.
+echo -e "Name,Age,Occupation\nAlice,30,Engineer\nBob,25,Designer" > /tmp/data.csv`,
+	},
+
+	{
+		Question: "find the 10 largest files in ~/Downloads",
+		Answer: `Find the 10 largest files in the ~/Downloads directory, sorted by size.
+find ~/Downloads -type f -exec du -sh {} \; 2> /dev/null | sort -rh | head -n 10`,
+	},
+	{
+		Question: "recursively find all the files in this directory",
+		Answer: `Recursively find all files in the current directory.
+find . -type f`,
+	},
+}
+
 func usage() {
 	fmt.Fprintf(os.Stderr, `think is a command-line tool that uses AI to generate and execute bash commands.
 
@@ -130,8 +149,9 @@ func main() {
 		agent.WithMemory(agent.TokenBufferMemory(3000)),
 	)
 	ag, err = agent.Templated(ag, map[string]string{
-		"system": SystemPrompt,
-		"user":   UserPrompt,
+		"system":      SystemPrompt,
+		"user":        UserPrompt,
+		"passthrough": "{{.}}",
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -150,6 +170,19 @@ func main() {
 	}{Shell: shellPath, OS: operatingSystem})
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if *model != "gpt-4" {
+
+		for _, example := range SimpleModelExamples {
+			if _, err := ag.Listen("passthrough", example.Question); err != nil {
+				log.Fatal(err)
+			}
+			if _, err := ag.Inject("passthrough", example.Answer); err != nil {
+				log.Fatal(err)
+			}
+
+		}
 	}
 
 	repl, err := NewREPL(ag, shellPath, strings.Join(flag.Args(), " "), *sendOutput)
