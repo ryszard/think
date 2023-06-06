@@ -29,7 +29,7 @@ If you have Go installed, you can also just do
 go install github.com/ryszard/think/cmd/think@latest
  ```
 
-In order to be able to use `think`, you need to have an OpenAI API key. `think` will for it in the `OPENAI_API_KEY` environment variable:
+In order to be able to use `think`, you need to have an OpenAI API key. `think` will look for it in the `OPENAI_API_KEY` environment variable:
 
 ```console
 export OPENAI_API_KEY="sk-..."
