@@ -26,7 +26,7 @@ brew install ryszard/ryszard/think
 If you have Go installed, you can also just do
 
 ```console
-go install github.com/ryszard/think/cmd/think
+go install github.com/ryszard/think/cmd/think@latest
  ```
 
 In order to be able to use `think`, you need to have an OpenAI API key. `think` will for it in the `OPENAI_API_KEY` environment variable:
